@@ -1,6 +1,7 @@
-#include <Wire.h>
+//#include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
+#include <i2c_t3.h>
 
 File myFile;
 unsigned long time;
@@ -10,7 +11,7 @@ const int chipSelect = BUILTIN_SDCARD;
 #define K_CONSTANT 0.0001450376808
 
 void setup(){
-  Wire.begin();
+ Wire.begin(I2C_MASTER, 0x00, I2C_PINS_16_17, I2C_PULLUP_EXT, I2C_RATE_400);
   Serial.begin(9600);
   SD.begin(chipSelect);
   //Serial.println("Starting");
