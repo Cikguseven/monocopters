@@ -229,11 +229,6 @@ uint32_t logTime;
 #define EM7180_AX                 0x1A  // int16_t from registers 0x1A-1B
 #define EM7180_AY                 0x1C  // int16_t from registers 0x1C-1D
 #define EM7180_AZ                 0x1E  // int16_t from registers 0x1E-1F
-#define EM7180_ATIME              0x20  // uint16_t from registers 0x20-21
-#define EM7180_GX                 0x22  // int16_t from registers 0x22-23
-#define EM7180_GY                 0x24  // int16_t from registers 0x24-25
-#define EM7180_GZ                 0x26  // int16_t from registers 0x26-27
-#define EM7180_GTIME              0x28  // uint16_t from registers 0x28-29
 #define EM7180_Baro               0x2A  // start of two-byte MS5637 pressure data, 16-bit signed interger
 #define EM7180_BaroTIME           0x2C  // start of two-byte MS5637 pressure timestamp, 16-bit unsigned
 #define EM7180_Temp               0x2E  // start of two-byte MS5637 temperature data, 16-bit signed interger
@@ -2104,6 +2099,7 @@ void I2Cscan()
         }
 
 void writeFile(String text){
+  // write file
   myFile = SD.open("IMU.csv", FILE_WRITE);
   if (myFile) { 
     // read from the file until there's nothing else in it:
