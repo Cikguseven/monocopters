@@ -1,27 +1,28 @@
-//#include <Wire.h>
+#include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
-#include <i2c_t3.h>
+//#include <i2c_t3.h>
 
 File myFile;
 unsigned long time;
-const int chipSelect = BUILTIN_SDCARD;
+const int chipSelect = 254;
 
 #define sensor_address 0x28
 #define K_CONSTANT 0.0001450376808
 
 void setup(){
- Wire.begin(I2C_MASTER, 0x00, I2C_PINS_16_17, I2C_PULLUP_EXT, I2C_RATE_400);
+ //Wire.begin(I2C_MASTER, 0x00, I2C_PINS_16_17, I2C_PULLUP_EXT, I2C_RATE_400);
+  Wire.begin();
+ //Wire.begin(I2C_MASTER, 0x00, I2C_PINS_16_17, I2C_PULLUP_EXT, I2C_RATE_400);
+  Wire.begin();
   Serial.begin(9600);
   SD.begin(chipSelect);
-  //Serial.println("Starting");
+  Serial.println("Starting");
   time = millis();
 }
 
 void get_sensor_data(byte *a,byte *b,byte *c,byte *d){
-  Wire.beginTransmission(sensor_address);
-  Wire.endTransmission();
-  Wire.requestFrom((int)sensor_address,(int)4);
+  Wire.requestFrom((int)sensor_address, (int) 4);
   *a = Wire.read();
   *b = Wire.read();
   *c = Wire.read();
@@ -55,7 +56,7 @@ void compute_sensor_data(){
   compute_pressure(combinedPressure,&Pressure);
   compute_air_speed(Temperature, Pressure);
   //Serial.println("--");
-  
+  ;
 }
 
 void compute_temperature(long unsigned tlong, double *temperature){
@@ -83,7 +84,9 @@ void compute_air_speed(double T,double P){
 }
 
 void loop(){
+  Serial.println("Looping...");
   compute_sensor_data();
+  
   delay(1000);
 }
  
@@ -91,7 +94,7 @@ void writeSD(String data){
   myFile = SD.open("Airspeed.csv",FILE_WRITE);
     if (myFile) { 
     // read from the file until there's nothing else in it:
-    myFile.print(time);
+    myFile.print((int)time);
     myFile.print(',');
     myFile.println(data);
     // close the file:
