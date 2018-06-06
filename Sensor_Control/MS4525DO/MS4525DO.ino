@@ -6,15 +6,25 @@
 File myFile;
 unsigned long time;
 const int chipSelect = 254;
-
+//int address1 = 72;
+int pin_SDA = 17; 
+int pin_SCL = 16;
 #define sensor_address 0x28
 #define K_CONSTANT 0.0001450376808
 
 void setup(){
+
  //Wire.begin(I2C_MASTER, 0x00, I2C_PINS_16_17, I2C_PULLUP_EXT, I2C_RATE_400);
-  Wire.begin();
- //Wire.begin(I2C_MASTER, 0x00, I2C_PINS_16_17, I2C_PULLUP_EXT, I2C_RATE_400);
-  Wire.begin();
+//  Wire.begin();
+// Wire.beginTransmission((int)sensor_address);
+// Wire.write(0);  
+//  Wire.endTransmission();
+  //Wire.setSDA(pin_SDA);
+ //Wire.setSCL(pin_SCL);
+
+// Wire.begin(I2C_MASTER, 0x00, I2C_PINS_16_17);
+ //Wire.begin();
+//>>>>>>> Stashed changes
   Serial.begin(9600);
   SD.begin(chipSelect);
   Serial.println("Starting");
@@ -22,7 +32,14 @@ void setup(){
 }
 
 void get_sensor_data(byte *a,byte *b,byte *c,byte *d){
+//<<<<<<< Updated upstream
+ 
   Wire.requestFrom((int)sensor_address, (int) 4);
+//=======
+  //Wire.beginTransmission(sensor_address);
+  //Wire.endTransmission();
+  Wire.requestFrom((int)sensor_address,(int)4);
+//>>>>>>> Stashed changes
   *a = Wire.read();
   *b = Wire.read();
   *c = Wire.read();
@@ -79,7 +96,7 @@ void compute_air_speed(double T,double P){
   double air_speed = sqrt(2*(adjustedP) / airDensity);
   //Serial.print("Air Speed (ms-1): ");
   Serial.println(air_speed,DEC);
-  writeSD(air_speed);
+  //writeSD(air_speed);
 
 }
 
