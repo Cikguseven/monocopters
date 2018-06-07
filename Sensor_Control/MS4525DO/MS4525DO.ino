@@ -1,7 +1,7 @@
-#include <Wire.h>
+//#include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
-//#include <i2c_t3.h>
+#include <i2c_t3.h>
 
 File myFile;
 unsigned long time;
@@ -14,15 +14,14 @@ int pin_SCL = 16;
 
 void setup(){
 
- //Wire.begin(I2C_MASTER, 0x00, I2C_PINS_16_17, I2C_PULLUP_EXT, I2C_RATE_400);
-//  Wire.begin();
-// Wire.beginTransmission((int)sensor_address);
-// Wire.write(0);  
-//  Wire.endTransmission();
-  //Wire.setSDA(pin_SDA);
- //Wire.setSCL(pin_SCL);
-
-// Wire.begin(I2C_MASTER, 0x00, I2C_PINS_16_17);
+  Wire.begin();
+Wire.beginTransmission((int)sensor_address);
+Wire.write(0);  
+ Wire.endTransmission();
+ Wire.setSDA(pin_SDA);
+ Wire.setSCL(pin_SCL);
+Wire.begin(I2C_MASTER, 0x00, I2C_PINS_16_17, I2C_PULLUP_INT, I2C_RATE_400);
+ //Wire.begin(I2C_MASTER, 0x00, I2C_PINS_16_17);
  //Wire.begin();
 //>>>>>>> Stashed changes
   Serial.begin(9600);
@@ -61,14 +60,14 @@ void compute_sensor_data(){
   combinedTemperature |= dd;
   combinedTemperature = combinedTemperature >> 5;
   
-  /*
+  
   Serial.print("byte: ");Serial.print(bb,BIN);
   Serial.print("|");Serial.print(bb,BIN);
   Serial.print("|");Serial.print(cc,BIN);
   Serial.print("|");Serial.println(dd,BIN);
   Serial.print("Comined Pressure: ");Serial.println(combinedPressure,BIN);
   Serial.print("Combined Temperature: ");Serial.println(combinedTemperature,BIN);
-  */
+  
   compute_temperature(combinedTemperature,&Temperature);
   compute_pressure(combinedPressure,&Pressure);
   compute_air_speed(Temperature, Pressure);
@@ -85,7 +84,7 @@ void compute_temperature(long unsigned tlong, double *temperature){
 void compute_pressure(long unsigned plong, double *pressure){
   double Pr = ( (double) plong - 0.05*16383.0 ) / (0.9*16383);
   double Pd = abs(1 - 2*Pr);
-  //Serial.print("Pressure (ratio): ");Serial.println(Pr,DEC);
+  
   //Serial.print("Pressure (difference): ");Serial.println(Pd,DEC);
   *pressure = Pd * 6894.76; // Pascalaa
 }
