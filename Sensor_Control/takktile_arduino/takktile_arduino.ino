@@ -37,8 +37,8 @@ uint32_t logTime;
 
 const uint8_t ANALOG_COUNT = 1; //number of sensors or columns of data collected
 
-int pin_SDA = 17; 
-int pin_SCL = 16;
+int pin_SDA = 18; 
+int pin_SCL = 19;
 //Definitions for MEMS Barometer----------------------------------------------------------------------------------------------------------------------
 #define FILE_BASE_NAME "Data"
 
@@ -190,7 +190,7 @@ void setup () {
   Wire.begin();
    Wire.setSDA(pin_SDA);
   Wire.setSCL(pin_SCL);
-Wire.begin(I2C_MASTER, 0x00, I2C_PINS_16_17, I2C_PULLUP_INT, I2C_RATE_400);
+Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_INT, I2C_RATE_400);
 
   Serial.begin(9600);
   
