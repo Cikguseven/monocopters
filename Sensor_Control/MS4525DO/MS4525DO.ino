@@ -1,44 +1,43 @@
 //#include <Wire.h>
+#include <IRremote.h>
 #include <SPI.h>
 #include <SD.h>
 #include <i2c_t3.h>
 
+int IR_IN_PIN = 11;
+IRrecv irrecv(IR_IN_PIN);
+decode_results results;
+
 File myFile;
-unsigned long time;
 const int chipSelect = 254;
 //int address1 = 72;
 int pin_SDA = 17; 
 int pin_SCL = 16;
 #define sensor_address 0x28
 #define K_CONSTANT 0.0001450376808
+bool writeToSD = false;
 
 void setup(){
-
+  
   Wire.begin();
-Wire.beginTransmission((int)sensor_address);
-Wire.write(0);  
- Wire.endTransmission();
- Wire.setSDA(pin_SDA);
- Wire.setSCL(pin_SCL);
-Wire.begin(I2C_MASTER, 0x00, I2C_PINS_16_17, I2C_PULLUP_INT, I2C_RATE_400);
- //Wire.begin(I2C_MASTER, 0x00, I2C_PINS_16_17);
- //Wire.begin();
-//>>>>>>> Stashed changes
+  Wire.beginTransmission((int)sensor_address);
+  Wire.write(0);  
+  Wire.endTransmission();
+  Wire.setSDA(pin_SDA);
+  Wire.setSCL(pin_SCL);
+  Wire.begin(I2C_MASTER, 0x00, I2C_PINS_16_17, I2C_PULLUP_INT, I2C_RATE_400);
+  
+  //Wire.begin(I2C_MASTER, 0x00, I2C_PINS_16_17);
+  //Wire.begin();
+  //>>>>>>> Stashed changes
   Serial.begin(9600);
+  irrecv.enableIRIn();
   SD.begin(chipSelect);
   Serial.println("Starting");
-  time = millis();
 }
 
 void get_sensor_data(byte *a,byte *b,byte *c,byte *d){
-//<<<<<<< Updated upstream
- 
   Wire.requestFrom((int)sensor_address, (int) 4);
-//=======
-  //Wire.beginTransmission(sensor_address);
-  //Wire.endTransmission();
-  Wire.requestFrom((int)sensor_address,(int)4);
-//>>>>>>> Stashed changes
   *a = Wire.read();
   *b = Wire.read();
   *c = Wire.read();
@@ -72,12 +71,10 @@ void compute_sensor_data(){
   compute_pressure(combinedPressure,&Pressure);
   compute_air_speed(Temperature, Pressure);
   //Serial.println("--");
-  ;
 }
 
 void compute_temperature(long unsigned tlong, double *temperature){
   *temperature = (double) tlong * 200.0 / 2047.0 - 50; // Degrees C
-  //Serial.print("Temperature (degrees C): ");Serial.println(*temperature);
   *temperature += 273.15; // Degrees K
 }
 
@@ -95,22 +92,23 @@ void compute_air_speed(double T,double P){
   double air_speed = sqrt(2*(adjustedP) / airDensity);
   //Serial.print("Air Speed (ms-1): ");
   Serial.println(air_speed,DEC);
-  //writeSD(air_speed);
+  if(writeToSD){
+    writeSD(air_speed);
+  }
 
 }
 
 void loop(){
-  Serial.println("Looping...");
   compute_sensor_data();
-  
-  delay(1000);
+  ir_loop();
+  //delay(100);
 }
  
 void writeSD(String data){
   myFile = SD.open("Airspeed.csv",FILE_WRITE);
     if (myFile) { 
     // read from the file until there's nothing else in it:
-    myFile.print((int)time);
+    myFile.print((int)millis()/1000);
     myFile.print(',');
     myFile.println(data);
     // close the file:
@@ -118,5 +116,17 @@ void writeSD(String data){
   } else {
     // if the file didn't open, print an error:
     Serial.println("error opening test.txt");
+  }
+}
+
+void ir_loop() {
+  if (irrecv.decode(&results)) {
+    //Serial.println(results.value);
+    if(results.value == 2065){
+      writeToSD = (writeToSD) ? false:true;
+      Serial.println(writeToSD);
+      delay(1000);
+    }
+    irrecv.resume();
   }
 }
