@@ -27,13 +27,18 @@
 // All the addresses were calculated in 8bit
 // And were right shifted when actually used
 
-#include <Wire.h>
+#include <i2c_t3.h>
 #include <SPI.h>
-#include "SdFat.h" //install sdfat.h library from library manager
+#include <SD.h>
+
+File myFile;
+const int chipSelect = BUILTIN_SDCARD;
+uint32_t logTime;
 
 const uint8_t ANALOG_COUNT = 1; //number of sensors or columns of data collected
 
-
+int pin_SDA = 17; 
+int pin_SCL = 16;
 //Definitions for MEMS Barometer----------------------------------------------------------------------------------------------------------------------
 #define FILE_BASE_NAME "Data"
 
@@ -47,12 +52,8 @@ const uint8_t ANALOG_COUNT = 1; //number of sensors or columns of data collected
 #define SENSOR_ALL_ON 0x0C
 #define SENSOR_ALL_OFF 0x0D
 
-const uint8_t chipSelect = SS;
 const uint32_t SAMPLE_INTERVAL_MS = 1000; //Logging time interval, in milliseconds. If want to change, take note the timestamp is using in-built micros() function recording time in microseconds
-uint32_t logTime;
-int pin_SDA = 17; 
-int pin_SCL = 16; 
-int led = 13
+
 
 float a0[NUM_SENSORS];
 float b1[NUM_SENSORS];
@@ -69,25 +70,6 @@ boolean flagShowAddress = false;
 boolean flagShowPressure = true;
 boolean flagShowTemperature = true;
 //--------------------------------------------------------------------------------------------
-
-
-// File system object.
-SdFatSdio sd;
-
-// Log file.
-SdFile file;
-
-//Headings for excel file
-void writeHeader() {
-  file.print(F("micros"));
-  for (uint8_t i = 0; i < ANALOG_COUNT; i++) {
-    file.print(F(",adc"));
-    file.print(i, DEC);
-  }
-  file.println();
-}
-
-#define error(msg) sd.errorHalt(F(msg))
 
 //specific to barometer
 void initialize() {
@@ -205,15 +187,13 @@ void checkAddresses()
 
 
 void setup () {
-  
-  pinMode(led, OUTPUT);
   Wire.begin();
-  Wire.setSDA(pin_SDA);
+   Wire.setSDA(pin_SDA);
   Wire.setSCL(pin_SCL);
-  const uint8_t BASE_NAME_SIZE = sizeof(FILE_BASE_NAME) - 1;
-  char fileName[13] = FILE_BASE_NAME "00.csv";
+Wire.begin(I2C_MASTER, 0x00, I2C_PINS_16_17, I2C_PULLUP_INT, I2C_RATE_400);
 
-  Serial.begin(115200);
+  Serial.begin(9600);
+  
 
   checkAddresses(); // check how many sensors are connected
 
@@ -223,53 +203,17 @@ void setup () {
   }
 
   // Wait for USB Serial
-  while (!Serial) {
-    SysCall::yield();
+  if (!SD.begin(chipSelect)) {
+    Serial.println("initialization failed!");
+    return;
   }
-  delay(1000);
-
-  //Serial.println(F("Type any character to start"));
-  //while (!Serial.available()) {
-    //SysCall::yield();
-  //}
-  // Initialize at the highest speed supported by the board that is
-  // not over 50 MHz. Try a lower speed if SPI errors occur.
-  if (!sd.begin()) {
-
-  }
-  // Find an unused file name.
-  if (BASE_NAME_SIZE > 6) {
-    error("FILE_BASE_NAME too long");
-  }
-  while (sd.exists(fileName)) {
-    if (fileName[BASE_NAME_SIZE + 1] != '9') {
-      fileName[BASE_NAME_SIZE + 1]++;
-    } else if (fileName[BASE_NAME_SIZE] != '9') {
-      fileName[BASE_NAME_SIZE + 1] = '0';
-      fileName[BASE_NAME_SIZE]++;
-    } else {
-      error("Can't create file name");
-    }
-  }
-  if (!file.open(fileName, O_CREAT | O_WRITE | O_EXCL)) {
-    error("file.open");
-  }
-  // Read any Serial data.
-  do {
-    delay(10);
-  } while (Serial.available() && Serial.read() >= 0);
-
-  Serial.print(F("Logging to: "));
-  Serial.println(fileName);
-  Serial.println(F("Type any character to stop"));
-
-  // Write data header.
-  writeHeader();
+  Serial.println("initialization success!");
 
   // Start on a multiple of the sample interval.
   logTime = micros() / (1000UL * SAMPLE_INTERVAL_MS) + 1;
   logTime *= 1000UL * SAMPLE_INTERVAL_MS;
 }
+
 
 void loop() {
 
@@ -364,14 +308,13 @@ void loop() {
 
     // Wait for log time.
     int32_t diff;
-    digitalWrite(led, HIGH);
     do {
       diff = micros() - logTime;
     } while (diff < 0);
 
     // Check for data rate too high.
     if (diff > 10) {
-      error("Missed data record");
+      Serial.println("Missed data record");
     }
 
     uint16_t data[ANALOG_COUNT];
@@ -381,28 +324,30 @@ void loop() {
       data[i] = oPressure; //Change oPressure to output value(s)of sensor in use
     }
     // Write data to file.  Start with log time in micros.
-    file.print(logTime);
+    //file.print(logTime);
 
-    // Write ADC data to CSV record.
-    for (uint8_t i = 0; i < ANALOG_COUNT; i++) {
-      file.write(',');
-      file.print(data[i]);
-    }
-    file.println();
-
-    // Force data to SD and update the directory entry to avoid data loss.
-    if (!file.sync() || file.getWriteError()) {
-      error("write error");
-    }
-    //LED blink to check that it is logging                  
-    digitalWrite(led, LOW);                 
-
-    //if (Serial.available()) {
-      // Close file and stop.
-      //file.close();
-      //Serial.println(F("Done"));
-      //SysCall::halt();
-    //}
+//    // Write ADC data to CSV record.
+//    file.write(',');
+//    file.print(data[0]);
+//    file.println();
+// WRITE TIME,data[0]
+    writeFile(logTime/1000000);
+    writeFile(",");
+    writeFile(data[0]);
+    writeFile('\n');
     // the calculations of the wrapping
     // that are used to calculate the minus signs
+}
+
+void writeFile(String text){
+  myFile = SD.open("Pressure.csv", FILE_WRITE);
+  if (myFile) { 
+    // read from the file until there's nothing else in it:
+    myFile.print(text);
+    // close the file:
+    myFile.close();
+  } else {
+    // if the file didn't open, print an error:
+    Serial.println("error opening test.txt");
+  }
 }
