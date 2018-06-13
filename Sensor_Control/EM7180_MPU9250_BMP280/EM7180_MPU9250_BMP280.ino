@@ -417,6 +417,10 @@ float eInt[3] = {0.0f, 0.0f, 0.0f};       // vector to hold integral error for M
 
 bool passThru = false;
 
+char fileName[50] = "";
+#define FILE_HEAD "IMU";
+#define FILE_END ".csv";
+int fileint = 0;
 void setup()
 {
 //  Wire.begin();
@@ -428,6 +432,18 @@ void setup()
   if (!SD.begin(chipSelect)) {
     Serial.println("initialization failed!");
     return;
+  }
+  String file_name = "IMU" + String(fileint);
+  file_name += ".csv";
+  Serial.println(file_name);
+  file_name.toCharArray(fileName,50);
+  while(SD.exists(fileName)){
+    fileint ++;
+    file_name = "IMU" + String(fileint);
+    file_name += FILE_END;
+    Serial.println(file_name);
+    memset(fileName, 0, sizeof(fileName ));
+    file_name.toCharArray(fileName,50);
   }
   Serial.println("initialization success!");
    // Set up the interrupt pin, its set as active high, push-pull
@@ -2101,7 +2117,7 @@ void I2Cscan()
         }
 
 void writeFile(String text){
-  myFile = SD.open("IMU.csv", FILE_WRITE);
+  myFile = SD.open(fileName, FILE_WRITE);
   if (myFile) { 
     // read from the file until there's nothing else in it:
     myFile.print(text);
@@ -2109,7 +2125,6 @@ void writeFile(String text){
     myFile.close();
   } else {
     // if the file didn't open, print an error:
-    Serial.println("error opening test.txt");
+    Serial.println("error opening sd card");
   }
 }
-

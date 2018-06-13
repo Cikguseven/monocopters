@@ -3,13 +3,15 @@
 #include <SPI.h>
 #include <SD.h>
 #include <i2c_t3.h>
-
+const int ledPin = 13;
 int IR_IN_PIN = 11;
 IRrecv irrecv(IR_IN_PIN);
 decode_results results;
 
 File myFile;
 const int chipSelect = 254;
+char fileName[50] = "";
+int fileint = 0;
 //int address1 = 72;
 int pin_SDA = 17; 
 int pin_SCL = 16;
@@ -26,7 +28,7 @@ void setup(){
   Wire.setSDA(pin_SDA);
   Wire.setSCL(pin_SCL);
   Wire.begin(I2C_MASTER, 0x00, I2C_PINS_16_17, I2C_PULLUP_INT, I2C_RATE_400);
-  
+  pinMode(ledPin, OUTPUT);
   //Wire.begin(I2C_MASTER, 0x00, I2C_PINS_16_17);
   //Wire.begin();
   //>>>>>>> Stashed changes
@@ -34,6 +36,7 @@ void setup(){
   irrecv.enableIRIn();
   SD.begin(chipSelect);
   Serial.println("Starting");
+
 }
 
 void get_sensor_data(byte *a,byte *b,byte *c,byte *d){
@@ -50,7 +53,7 @@ void compute_sensor_data(){
   
   long unsigned combinedPressure = aa, combinedTemperature = cc;
   
-  double Temperature,Pressure;
+  double Temperature,Pressure,Air_Speed;
   
   combinedPressure &= 0x3F;
   combinedPressure = combinedPressure << 8;
@@ -60,17 +63,27 @@ void compute_sensor_data(){
   combinedTemperature = combinedTemperature >> 5;
   
   
-  Serial.print("byte: ");Serial.print(bb,BIN);
-  Serial.print("|");Serial.print(bb,BIN);
-  Serial.print("|");Serial.print(cc,BIN);
-  Serial.print("|");Serial.println(dd,BIN);
-  Serial.print("Comined Pressure: ");Serial.println(combinedPressure,BIN);
-  Serial.print("Combined Temperature: ");Serial.println(combinedTemperature,BIN);
+  //Serial.print("byte: ");Serial.print(bb,BIN);
+  //Serial.print("|");Serial.print(bb,BIN);
+  //Serial.print("|");Serial.print(cc,BIN);
+  //Serial.print("|");Serial.println(dd,BIN);
+  //Serial.print("Comined Pressure: ");Serial.println(combinedPressure,BIN);
+  //Serial.print("Combined Temperature: ");Serial.println(combinedTemperature,BIN);
   
   compute_temperature(combinedTemperature,&Temperature);
   compute_pressure(combinedPressure,&Pressure);
-  compute_air_speed(Temperature, Pressure);
+  compute_air_speed(Temperature, Pressure,&Air_Speed);
   //Serial.println("--");
+  if(writeToSD){
+    writeSD(millis()/1000);
+    writeSD(',');
+    writeSD(Air_Speed*1000000);
+    writeSD(',');
+    writeSD(Pressure*1000000);
+    writeSD(',');
+    writeSD(Temperature*1000000);
+    writeSD('\n');
+  }
 }
 
 void compute_temperature(long unsigned tlong, double *temperature){
@@ -86,45 +99,61 @@ void compute_pressure(long unsigned plong, double *pressure){
   *pressure = Pd * 6894.76; // Pascalaa
 }
 
-void compute_air_speed(double T,double P){ 
+void compute_air_speed(double T,double P,double *Air_Speed){ 
   double airDensity = 101352.9 / (287.058 * T);
   double adjustedP = P*K_CONSTANT;
-  double air_speed = sqrt(2*(adjustedP) / airDensity);
+  *Air_Speed = sqrt(2*(adjustedP) / airDensity);
   //Serial.print("Air Speed (ms-1): ");
-  Serial.println(air_speed,DEC);
-  if(writeToSD){
-    writeSD(air_speed);
-  }
+  //Serial.println(air_speed,DEC);
 
 }
 
 void loop(){
   compute_sensor_data();
   ir_loop();
-  //delay(100);
+  delay(100);
 }
  
 void writeSD(String data){
-  myFile = SD.open("Airspeed.csv",FILE_WRITE);
+  myFile = SD.open(fileName,FILE_WRITE);
     if (myFile) { 
     // read from the file until there's nothing else in it:
-    myFile.print((int)millis()/1000);
-    myFile.print(',');
-    myFile.println(data);
+
+    myFile.print(data);
+  
     // close the file:
     myFile.close();
   } else {
     // if the file didn't open, print an error:
-    Serial.println("error opening test.txt");
+    Serial.println("error opening SD card");
   }
 }
 
 void ir_loop() {
   if (irrecv.decode(&results)) {
     //Serial.println(results.value);
-    if(results.value == 2065){
+    if(results.value == 2065 || results.value == 3772782313){
       writeToSD = (writeToSD) ? false:true;
       Serial.println(writeToSD);
+
+      if(writeToSD){
+
+        String file_name = "IMU" + String(fileint);
+        file_name += ".csv";
+        file_name.toCharArray(fileName,50);
+        while(SD.exists(fileName)){
+          fileint ++;
+          file_name = "IMU" + String(fileint);
+          file_name += ".csv";
+          Serial.println(file_name);
+          memset(fileName, 0, sizeof(fileName ));
+          file_name.toCharArray(fileName,50);
+        }
+        digitalWrite(ledPin, HIGH);
+      }else{
+        digitalWrite(ledPin, LOW);
+      }
+
       delay(1000);
     }
     irrecv.resume();
